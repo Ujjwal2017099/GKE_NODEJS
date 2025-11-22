@@ -47,7 +47,7 @@ jobs:
       - name: Extract GCP Project ID from JSON key
         id: project
         run: |
-          echo "${{ secrets.GCP_SA_KEY }}" > sa-key.json
+          printf "%s" "${{ secrets.GCP_SA_KEY }}" > sa-key.json
           PROJECT_ID=$(jq -r '.project_id' sa-key.json)
           echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
 
