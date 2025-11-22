@@ -47,9 +47,9 @@ jobs:
       - name: Extract GCP Project ID from JSON key
         id: project
         run: |
-          PROJECT_ID=$(jq -r '.project_id' <<< "${{ secrets.GCP_SA_KEY }}")
+          echo "${{ secrets.GCP_SA_KEY }}" > sa-key.json
+          PROJECT_ID=$(jq -r '.project_id' sa-key.json)
           echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
-          echo "Using GCP project: $PROJECT_ID"
 
       - name: Configure Docker for GCP
         run: gcloud auth configure-docker
