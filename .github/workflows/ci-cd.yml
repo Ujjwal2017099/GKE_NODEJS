@@ -58,7 +58,7 @@ jobs:
         run: |
           IMAGE_NAME=$(echo "${GITHUB_REPOSITORY##*/}" | tr '[:upper:]' '[:lower:]')  # Use repo name as image name
           echo "Building Docker image: gcr.io/$GOOGLE_CLOUD_PROJECT/$IMAGE_NAME:${{ needs.create-tag.outputs.image_tag }}"
-          docker build -t gcr.io/$GOOGLE_CLOUD_PROJECT/$IMAGE_NAME:${{ needs.create-tag.outputs.image_tag }} .
+          docker build -t gcr.io/$GOOGLE_CLOUD_PROJECT/$IMAGE_NAME:${{ needs.create-tag.outputs.image_tag }} -f server/Dockerfile server/
 
   # Stage 3: Push Docker image to GCR
   push-image:
