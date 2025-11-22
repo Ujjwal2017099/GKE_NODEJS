@@ -1,0 +1,79 @@
+name: Build and Push to GCP
+
+on:
+  workflow_dispatch:
+
+jobs:
+  # Stage 1: Create a unique image tag
+  create-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.set-tag.outputs.tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Generate unique Docker image tag
+        id: set-tag
+        run: |
+          # Generate tag: branch name + short commit SHA + timestamp
+          BRANCH_NAME=${GITHUB_REF##*/}
+          SHORT_SHA=${GITHUB_SHA::7}
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          TAG="${BRANCH_NAME}-${SHORT_SHA}-${TIMESTAMP}"
+          echo "Generated tag: $TAG"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+  # Stage 2: Build Docker image
+  build-image:
+    runs-on: ubuntu-latest
+    needs: create-tag
+    outputs:
+      image_tag: ${{ needs.create-tag.outputs.image_tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Extract GCP Project ID from JSON key
+        id: project
+        run: |
+          PROJECT_ID=$(jq -r '.project_id' <<< "${{ secrets.GCP_SA_KEY }}")
+          echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
+          echo "Using GCP project: $PROJECT_ID"
+
+      - name: Configure Docker for GCP
+        run: gcloud auth configure-docker
+
+      - name: Build Docker image
+        run: |
+          IMAGE_NAME=${GITHUB_REPOSITORY##*/}  # Use repo name as image name
+          echo "Building Docker image: gcr.io/${{ steps.project.outputs.project_id }}/$IMAGE_NAME:${{ needs.create-tag.outputs.image_tag }}"
+          docker build -t gcr.io/${{ steps.project.outputs.project_id }}/$IMAGE_NAME:${{ needs.create-tag.outputs.image_tag }} .
+
+  # Stage 3: Push Docker image to GCR
+  push-image:
+    runs-on: ubuntu-latest
+    needs: build-image
+    steps:
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Configure Docker for GCP
+        run: gcloud auth configure-docker
+
+      - name: Push Docker image
+        run: |
+          IMAGE_NAME=${GITHUB_REPOSITORY##*/}  # Repo name as image name
+          TAG=${{ needs.build-image.outputs.image_tag }}
+          echo "Pushing Docker image: gcr.io/${{ needs.build-image.steps.project.outputs.project_id }}/$IMAGE_NAME:$TAG"
+          docker push gcr.io/${{ needs.build-image.steps.project.outputs.project_id }}/$IMAGE_NAME:$TAG
