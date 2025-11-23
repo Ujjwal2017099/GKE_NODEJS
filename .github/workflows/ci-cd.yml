@@ -58,6 +58,7 @@ jobs:
         run: |
           IMAGE_NAME="gke-nodejs"
           echo "Building Docker image: gcr.io/$GOOGLE_CLOUD_PROJECT/$IMAGE_NAME:${{ needs.create-tag.outputs.image_tag }}"
-          docker build -t gcr.io/$GOOGLE_CLOUD_PROJECT/$IMAGE_NAME:${{ needs.create-tag.outputs.image_tag }} -f server/Dockerfile server/
+          docker build -t gcr.io/$GOOGLE_CLOUD_PROJECT/$IMAGE_NAME:${{ needs.create-tag.outputs.image_tag }} -t gcr.io/$GOOGLE_CLOUD_PROJECT/$IMAGE_NAME:latest -f server/Dockerfile server/
           echo "Pushing Docker image: gcr.io/$GOOGLE_CLOUD_PROJECT/$IMAGE_NAME:${{ needs.create-tag.outputs.image_tag }}"
           docker push gcr.io/$GOOGLE_CLOUD_PROJECT/$IMAGE_NAME:${{ needs.create-tag.outputs.image_tag }}
+          docker push gcr.io/$GOOGLE_CLOUD_PROJECT/$IMAGE_NAME:latest
